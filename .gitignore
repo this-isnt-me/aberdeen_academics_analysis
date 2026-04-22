@@ -2,3 +2,6 @@
 .claude
 .idea/
 __pycache__/
+*.pyc
+config.yaml
+.env
