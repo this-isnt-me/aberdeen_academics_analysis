@@ -50,6 +50,7 @@ from utils.ona_metrics import (
     compute_ei_index,
     compute_school_metagraph,
     compute_school_bridges,
+    compute_blau_index,
 )
 from utils.visualisation import (
     get_school_color_map,
@@ -153,7 +154,9 @@ PAGES = [
     "10. School-Level Collaboration Map",
     "11. School Bridges & Key Connectors",
     "12. HITS Analysis — Hubs & Authorities",
-    "13. Download & Export",
+    "13. Ego Network Diversity (Blau Index)",
+    "14. Temporal Trajectory Analysis",
+    "15. Download & Export",
 ]
 
 page = st.sidebar.radio("Navigate to:", PAGES, label_visibility="collapsed")
@@ -944,7 +947,22 @@ def page_communities():
         return
 
     nd, ed = graph_to_cache_args(G)
-    result = safe_run(compute_communities, nd, ed, label="community detection")
+
+    resolution = st.slider(
+        "Community detection resolution",
+        min_value=0.5,
+        max_value=2.0,
+        value=1.0,
+        step=0.1,
+        help=(
+            "Resolution controls how finely the algorithm divides the network into communities. "
+            "At 1.0 (the default) it finds naturally sized clusters. "
+            "Increase it to find smaller, tighter research groups. "
+            "Decrease it to find broader disciplinary groupings."
+        ),
+    )
+
+    result = safe_run(compute_communities, nd, ed, resolution, label="community detection")
     if result is None:
         return
     partition, modularity, method = result
@@ -1323,7 +1341,7 @@ def page_download():
     # Community assignments
     st.subheader("Community Assignments")
     with st.spinner("Computing community assignments…"):
-        comm_result = safe_run(compute_communities, nd, ed, label="communities")
+        comm_result = safe_run(compute_communities, nd, ed, 1.0, label="communities")
     if comm_result:
         partition, modularity, method = comm_result
         comm_df = pd.DataFrame([
@@ -1580,6 +1598,157 @@ def page_school_bridges():
 
 
 # ============================================================
+# Page 13 — Ego Network Diversity (Blau Index)
+# ============================================================
+def page_blau_index():
+    st.header("Ego Network Diversity (Blau Index)")
+    st.caption(
+        "Measures how diverse each academic's immediate co-authorship circle is "
+        "in terms of school membership."
+    )
+
+    if not min_nodes_ok(G):
+        return
+
+    nd, ed = graph_to_cache_args(G)
+
+    weighted = st.toggle("Weight by co-authored paper volume", value=True)
+    if weighted:
+        st.markdown(
+            "_The **weighted** Blau index accounts for the strength of each collaboration — "
+            "a colleague with whom you have co-authored ten papers contributes more to your "
+            "diversity score than one with whom you have co-authored one. "
+            "The **unweighted** version treats all co-authorship ties equally regardless of volume._"
+        )
+    else:
+        st.markdown(
+            "_The **unweighted** Blau index treats every co-authorship tie equally, "
+            "regardless of how many papers each relationship has produced. "
+            "Toggle on to weight by paper volume._"
+        )
+
+    st.info(
+        "The Blau index measures how spread across schools an academic's co-authors are. "
+        "A score of **0** means all co-authors come from the same school — the ego network is "
+        "homogeneous. A score approaching **1** means co-authors are maximally spread across "
+        "different schools. Academics with only one recorded co-author are excluded from the "
+        "distribution — a single co-author gives no information about diversity."
+    )
+
+    blau = safe_run(compute_blau_index, nd, ed, weighted=weighted, label="Blau index")
+    if blau is None:
+        return
+
+    # Split into scored and insufficient-data groups
+    scored = {n: v for n, v in blau.items() if v is not None}
+    insufficient = {n: v for n, v in blau.items() if v is None}
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Academics with diversity score", len(scored))
+    col2.metric("Insufficient neighbours (excluded)", len(insufficient))
+    col3.metric(
+        "Mean Blau index",
+        f"{sum(scored.values()) / len(scored):.3f}" if scored else "N/A",
+    )
+
+    if scored:
+        blau_df = pd.DataFrame([
+            {
+                "Name": G.nodes[n].get("label", n),
+                "School": G.nodes[n].get("school", ""),
+                "Job Title": G.nodes[n].get("job_title", ""),
+                "Blau Index": v,
+                "Co-authors": G.degree(n),
+                "Total Co-authored Papers": G.degree(n, weight="weight"),
+            }
+            for n, v in scored.items()
+        ]).sort_values("Blau Index", ascending=False).reset_index(drop=True)
+
+        st.subheader("Most diverse ego networks (highest Blau index)")
+        st.dataframe(blau_df.head(20), use_container_width=True, hide_index=True)
+        with st.expander("Full Blau index table"):
+            st.dataframe(blau_df, use_container_width=True, hide_index=True)
+
+        # Distribution
+        fig_hist = px.histogram(
+            blau_df,
+            x="Blau Index",
+            nbins=20,
+            title="Distribution of Ego Network Diversity (Blau Index)",
+            labels={"Blau Index": "Blau Index", "count": "Number of Academics"},
+        )
+        fig_hist.update_layout(height=350)
+        st.plotly_chart(fig_hist, use_container_width=True)
+
+        # Box by school
+        st.subheader("Blau Index Distribution by School")
+        st.plotly_chart(
+            plot_boxplot(blau_df, "School", "Blau Index", "Ego Network Diversity by School"),
+            use_container_width=True,
+        )
+
+        # Box by job title
+        st.subheader("Blau Index Distribution by Job Title")
+        st.plotly_chart(
+            plot_boxplot(blau_df, "Job Title", "Blau Index", "Ego Network Diversity by Job Title"),
+            use_container_width=True,
+        )
+
+    if insufficient:
+        with st.expander(f"Academics excluded — insufficient neighbours ({len(insufficient)})"):
+            insuf_df = pd.DataFrame([
+                {
+                    "Name": G.nodes[n].get("label", n),
+                    "School": G.nodes[n].get("school", ""),
+                    "Job Title": G.nodes[n].get("job_title", ""),
+                    "Co-authors": G.degree(n),
+                    "Reason": "No co-authors" if G.degree(n) == 0 else "Only one co-author — insufficient for diversity score",
+                }
+                for n in insufficient
+            ]).sort_values("Name")
+            st.dataframe(insuf_df, use_container_width=True, hide_index=True)
+
+    with st.expander("Technical notes"):
+        st.markdown(
+            """
+            - **Formula:** Blau index = 1 − Σ p_i², where p_i is the proportion of the ego's
+              immediate co-authors belonging to school i.
+            - **Weighted version:** p_i = (sum of edge weights to school-i neighbours) ÷ (total
+              edge weight of node). This gives more weight to frequently co-authored colleagues.
+            - **Unweighted version:** p_i = (count of school-i neighbours) ÷ (total neighbours).
+            - **Exclusion rule:** nodes with 0 or 1 co-author are excluded (degree 0 = isolated;
+              degree 1 = a single neighbour always yields Blau = 0, which is indistinguishable
+              from a genuinely homogeneous multi-neighbour network).
+            - Ego node itself is never included in the calculation — only its neighbours.
+            """
+        )
+
+
+# ============================================================
+# Page 14 — Temporal Trajectory Analysis
+# ============================================================
+def page_temporal_trajectory():
+    st.header("Temporal Trajectory Analysis")
+    st.caption(
+        "Tracks how each academic's collaborative publishing activity has changed over time."
+    )
+
+    st.info(
+        "Temporal trajectory analysis requires publication year data attached to each "
+        "co-authorship edge. This information is not present in the current graph file — "
+        "the graph contains only a single `weight` attribute per edge (total co-authored "
+        "papers between each pair), with no per-year breakdown.\n\n"
+        "To enable this analysis, the graph would need to be rebuilt with per-paper "
+        "publication years as edge attributes (e.g. a list of years or annual co-authorship "
+        "counts per pair). Please speak to the data team about enriching the source data.\n\n"
+        "Once year-level data is available, this page would classify each academic's "
+        "trajectory as **Ascending** (growing collaborative output), **Stable**, or "
+        "**Declining** based on a linear trend fitted to their annual co-authorship counts "
+        "across at least three years of activity."
+    )
+
+
+# ============================================================
 # Router
 # ============================================================
 ROUTE_MAP = {
@@ -1595,7 +1764,9 @@ ROUTE_MAP = {
     "10. School-Level Collaboration Map": page_school_map,
     "11. School Bridges & Key Connectors": page_school_bridges,
     "12. HITS Analysis — Hubs & Authorities": page_hits,
-    "13. Download & Export": page_download,
+    "13. Ego Network Diversity (Blau Index)": page_blau_index,
+    "14. Temporal Trajectory Analysis": page_temporal_trajectory,
+    "15. Download & Export": page_download,
 }
 
 ROUTE_MAP[page]()

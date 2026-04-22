@@ -8,7 +8,7 @@ GRAPH_PATH = "data/aberdeen_collaborations_refined.graphml"
 
 @st.cache_resource
 def load_graph():
-    """Load the full graph from disk, convert to undirected, remove incomplete nodes."""
+    """Load the full graph from disk, convert to simple undirected, strip self-loops and incomplete nodes."""
     if not os.path.exists(GRAPH_PATH):
         return None, (
             f"Graph file not found at: **{GRAPH_PATH}**. "
@@ -17,7 +17,15 @@ def load_graph():
         )
     try:
         G = nx.read_graphml(GRAPH_PATH)
-        G = G.to_undirected()
+
+        # Collapse any parallel edges (MultiGraph) into a simple graph before converting
+        if isinstance(G, nx.MultiGraph):
+            G = nx.Graph(G)
+        else:
+            G = G.to_undirected()
+
+        # Self-loops give nodes artificial degree that distorts k-core and other degree-based metrics
+        G.remove_edges_from(nx.selfloop_edges(G))
 
         incomplete = [
             n for n, d in G.nodes(data=True)

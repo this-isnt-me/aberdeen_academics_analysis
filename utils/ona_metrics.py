@@ -195,11 +195,29 @@ def compute_articulation_points(nodes_data, edges_data) -> pd.DataFrame:
 
 @st.cache_data
 def compute_kcore(nodes_data, edges_data) -> pd.DataFrame:
+    """
+    Compute k-core shell number for each node.
+
+    Defensively removes self-loops before calling nx.core_number, which
+    raises NetworkXNotImplemented when self-loops are present. Self-loops
+    inflate node degree without contributing to mutual connectivity and must
+    be stripped before any degree-based peeling algorithm.
+
+    Asserts that the graph is undirected and not a multigraph, since those
+    are hard preconditions of k-core decomposition.
+    """
     G = rebuild_graph(nodes_data, edges_data)
+    assert not G.is_directed(), "K-core requires an undirected graph"
+    assert not isinstance(G, nx.MultiGraph), "K-core requires a simple graph, not a multigraph"
+
+    G_clean = G.copy()
+    G_clean.remove_edges_from(nx.selfloop_edges(G_clean))
+
     try:
-        core_num = nx.core_number(G)
-    except Exception:
-        core_num = {n: 0 for n in G.nodes()}
+        core_num = nx.core_number(G_clean)
+    except Exception as exc:
+        raise RuntimeError(f"nx.core_number failed after self-loop removal: {exc}") from exc
+
     rows = [
         {
             "Name": G.nodes[n].get("label", n),
@@ -242,11 +260,95 @@ def compute_school_fragmentation(nodes_data, edges_data) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# Ego network diversity — Blau index
+# ---------------------------------------------------------------------------
+@st.cache_data
+def compute_blau_index(nodes_data, edges_data, weighted: bool = True) -> dict:
+    """
+    Compute the Blau index of school diversity for each node's ego network.
+
+    Blau index = 1 - sum(p_i^2), where p_i is the proportion of ego-network
+    neighbours belonging to school i.  Ranges 0 (all neighbours same school)
+    to approaching 1 (maximally spread across schools).
+
+    Parameters
+    ----------
+    nodes_data, edges_data : hashable tuples from graph_to_cache_args()
+    weighted : bool
+        If True, neighbour contributions are weighted by edge weight (number
+        of co-authored papers).  If False, all neighbours are treated equally.
+
+    Returns
+    -------
+    dict mapping node id to:
+        float  — Blau index (0.0–1.0) when the node has ≥ 2 neighbours
+        None   — when the node is isolated or has only 1 neighbour
+                 (insufficient for a meaningful diversity score)
+    """
+    G = rebuild_graph(nodes_data, edges_data)
+    result = {}
+
+    for n in G.nodes():
+        nbrs = list(G.neighbors(n))
+
+        if len(nbrs) == 0:
+            result[n] = None
+            continue
+
+        if len(nbrs) == 1:
+            # Mathematically always 0; flagged as None so the UI can distinguish
+            # "no data" from "genuinely homogeneous network"
+            result[n] = None
+            continue
+
+        if weighted:
+            school_weights: dict[str, float] = {}
+            total_weight = 0.0
+            for nb in nbrs:
+                w = float(G[n][nb].get("weight", 1))
+                school = G.nodes[nb].get("school", "")
+                school_weights[school] = school_weights.get(school, 0.0) + w
+                total_weight += w
+            if total_weight == 0:
+                result[n] = None
+                continue
+            proportions = [w / total_weight for w in school_weights.values()]
+        else:
+            school_counts: dict[str, int] = {}
+            for nb in nbrs:
+                school = G.nodes[nb].get("school", "")
+                school_counts[school] = school_counts.get(school, 0) + 1
+            total = len(nbrs)
+            proportions = [c / total for c in school_counts.values()]
+
+        result[n] = round(1.0 - sum(p ** 2 for p in proportions), 4)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Community detection
 # ---------------------------------------------------------------------------
 @st.cache_data
-def compute_communities(nodes_data, edges_data):
-    """Returns (partition_dict, modularity, method_name)."""
+def compute_communities(nodes_data, edges_data, resolution: float = 1.0):
+    """
+    Detect communities using the Louvain algorithm (python-louvain).
+
+    Parameters
+    ----------
+    nodes_data, edges_data : hashable tuples from graph_to_cache_args()
+    resolution : float
+        Controls community granularity. Values > 1.0 produce more, smaller
+        communities; values < 1.0 produce fewer, larger ones. Default 1.0.
+
+    Returns
+    -------
+    (partition_dict, modularity, method_name)
+    """
+    import random as _random
+    _random.seed(42)
+    np.random.seed(42)
+
     G = rebuild_graph(nodes_data, edges_data)
     partition = {}
     method = "unknown"
@@ -254,13 +356,32 @@ def compute_communities(nodes_data, edges_data):
 
     try:
         import community as community_louvain  # python-louvain
-        partition = community_louvain.best_partition(G, weight="weight")
+        partition = community_louvain.best_partition(
+            G, weight="weight", resolution=resolution, random_state=42
+        )
         method = "Louvain"
         try:
             modularity = community_louvain.modularity(partition, G, weight="weight")
         except Exception:
             pass
+    except TypeError:
+        # Older python-louvain without random_state — seeds already set above
+        try:
+            import community as community_louvain
+            partition = community_louvain.best_partition(
+                G, weight="weight", resolution=resolution
+            )
+            method = "Louvain"
+            try:
+                modularity = community_louvain.modularity(partition, G, weight="weight")
+            except Exception:
+                pass
+        except Exception:
+            pass
     except Exception:
+        pass
+
+    if not partition:
         try:
             comms = list(nx.community.greedy_modularity_communities(G, weight="weight"))
             for i, comm in enumerate(comms):
