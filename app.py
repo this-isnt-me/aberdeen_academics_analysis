@@ -1,5 +1,5 @@
 """
-RGU Research Network Analyser — main Streamlit application.
+University of Aberdeen Research Network Analyser — main Streamlit application.
 All analyses operate on undirected co-authorship graphs only.
 """
 from __future__ import annotations
@@ -71,7 +71,7 @@ from utils.visualisation import (
 # ============================================================
 st.set_page_config(
     layout="wide",
-    page_title="RGU Research Network Analyser",
+    page_title="University of Aberdeen Research Network Analyser",
     page_icon="🔬",
 )
 
@@ -111,7 +111,7 @@ if st.session_state.get("authentication_status") is not True:
         st.error("Username or password is incorrect.")
     else:
         st.warning(
-            "Please enter your credentials to access the RGU Research Network Analyser."
+            "Please enter your credentials to access the University of Aberdeen Research Network Analyser."
         )
     st.stop()
 
@@ -137,7 +137,7 @@ if G_full.is_directed():
 st.sidebar.markdown(f"Logged in as **{st.session_state['name']}**")
 authenticator.logout("Logout", "sidebar")
 st.sidebar.markdown("---")
-st.sidebar.title("🔬 RGU Network Analyser")
+st.sidebar.title("🔬 Univeristy of Aberdeen Network Analyser")
 st.sidebar.markdown("---")
 
 PAGES = [
@@ -225,13 +225,13 @@ def safe_run(fn, *args, label="metric", **kwargs):
 def page_introduction():
     st.header("Introduction & How to Use This Tool")
     st.caption(
-        "An editorial guide for RGU leadership explaining what this tool reveals "
+        "An editorial guide for Univeristy of Aberdeen leadership explaining what this tool reveals "
         "about co-authorship patterns and how to interpret its outputs."
     )
 
     st.markdown(
         """
-        This tool maps the co-authorship relationships between RGU academic staff to surface strategic
+        This tool maps the co-authorship relationships between Univeristy of Aberdeen academic staff to surface strategic
         insights about research collaboration, knowledge flow, and institutional resilience.
         The underlying data is drawn **exclusively from published co-authored papers**.
         A connection between two academics exists only because they have jointly published at least one
@@ -248,7 +248,7 @@ def page_introduction():
             - Which academics are the most collaborative in the published record
             - Which academics are the most strategically positioned in the co-authorship network
             - Where schools are publishing jointly and where they are not
-            - Which individuals or relationships represent a fragility risk to RGU's research portfolio
+            - Which individuals or relationships represent a fragility risk to Univeristy of Aberdeen's research portfolio
             """
         )
     with col2:
@@ -258,7 +258,7 @@ def page_introduction():
             - Whether two academics work closely together but have not yet co-published
             - The quality or impact of the papers behind each connection
             - Relationships formed through teaching, supervision, or committee work
-            - Collaborations with researchers outside RGU (unless those co-authors appear as graph nodes)
+            - Collaborations with researchers outside Univeristy of Aberdeen (unless those co-authors appear as graph nodes)
             """
         )
 
@@ -266,7 +266,7 @@ def page_introduction():
     st.subheader("How to read this tool")
     st.markdown(
         """
-        - **Each dot** in the network is an RGU academic with a known school and job title.
+        - **Each dot** in the network is an Univeristy of Aberdeen academic with a known school and job title.
         - **Each line** between two dots means those two academics have at least one jointly published paper.
         - **A thicker or heavier line** means more co-authored papers between that pair.
         - **The sidebar filters** let you focus on a specific school or job title band. Filtering to a
@@ -295,7 +295,7 @@ def page_introduction():
         st.info(
             "**Vice Chancellor**\n\n"
             "\"Where are the strategic co-authorship partnership opportunities "
-            "across RGU's research portfolio, and where are the gaps?\""
+            "across Univeristy of Aberdeen's research portfolio, and where are the gaps?\""
         )
 
     st.markdown("---")
@@ -350,7 +350,7 @@ def page_introduction():
 def page_network_overview():
     st.header("Network Overview")
     st.caption(
-        "A high-level view of the shape and scale of RGU's co-authorship network "
+        "A high-level view of the shape and scale of Univeristy of Aberdeen's co-authorship network "
         "within the current filter selection."
     )
 
@@ -379,7 +379,7 @@ def page_network_overview():
     )
 
     st.info(
-        "This map shows the full shape of RGU's co-authorship network — who has published with whom, "
+        "This map shows the full shape of Univeristy of Aberdeen's co-authorship network — who has published with whom, "
         "and how often. Dense clusters indicate schools or groups where joint publication is a common "
         "working practice. Isolated nodes on the periphery are academics with few or no recorded "
         "co-authorship ties in the dataset; this may reflect a preference for sole-authored work, an "
@@ -462,7 +462,7 @@ def page_centrality():
     st.info(
         "Degree centrality counts how many different colleagues an academic has co-authored with, "
         "expressed as a proportion of all possible co-authors in the network. A high score means this "
-        "person has published jointly with a wide range of colleagues across RGU. This is a measure of "
+        "person has published jointly with a wide range of colleagues across Univeristy of Aberdeen. This is a measure of "
         "breadth of co-authorship — how many different people this academic has worked with, regardless "
         "of how many papers each relationship has produced."
     )
@@ -504,9 +504,9 @@ def page_centrality():
         "Betweenness centrality identifies the academics who appear most often on the shortest "
         "co-authorship paths between other pairs of researchers. An academic with high betweenness is a "
         "bridge: many other researchers are connected to the rest of the network through this person's "
-        "publication record. If this academic were to leave RGU or cease publishing collaboratively, the "
+        "publication record. If this academic were to leave Univeristy of Aberdeen or cease publishing collaboratively, the "
         "paths connecting many other researchers would lengthen or disappear entirely. These individuals "
-        "are the connective tissue of RGU's co-authorship network and represent key-person risks from a "
+        "are the connective tissue of Univeristy of Aberdeen's co-authorship network and represent key-person risks from a "
         "research continuity perspective."
     )
     st.markdown(
@@ -531,7 +531,7 @@ def page_centrality():
         "Eigenvector centrality measures not just how many co-authors an academic has, but how "
         "well-connected and productive those co-authors are. Being linked by co-authorship to other "
         "highly connected researchers amplifies your score. An academic with a high eigenvector score "
-        "is embedded in the most active and mutually interconnected part of RGU's co-authorship network "
+        "is embedded in the most active and mutually interconnected part of Univeristy of Aberdeen's co-authorship network "
         "— they publish with people who themselves publish widely. This is a measure of research network prestige."
     )
     ec = safe_run(compute_eigenvector_centrality, nd, ed, label="eigenvector centrality")
@@ -602,7 +602,7 @@ def page_brokerage():
 
     nd, ed = graph_to_cache_args(G)
     st.info(
-        "These brokerage roles describe how each academic functions as a bridge within RGU's "
+        "These brokerage roles describe how each academic functions as a bridge within Univeristy of Aberdeen's "
         "co-authorship network. The roles are defined purely by co-publication patterns — an academic "
         "identified as a Gatekeeper controls external co-authorship access to their school only in the "
         "sense that the published record shows all cross-school papers passing through them. This may "
@@ -684,7 +684,7 @@ def page_structural_holes():
         "academic's co-authors form a tight mutual publishing cluster. Both positions have value: "
         "low-constraint academics are positioned to generate novel cross-disciplinary ideas; "
         "high-constraint academics are embedded in productive, trust-based publishing teams. The "
-        "strategic question for RGU is whether low constraint is distributed across the institution "
+        "strategic question for Univeristy of Aberdeen is whether low constraint is distributed across the institution "
         "or concentrated only at senior levels."
     )
 
@@ -777,7 +777,7 @@ def page_assortativity():
         st.info(
             "This score is calculated from the co-authorship record only. A score close to **+1** "
             "means the vast majority of joint publications involve two academics from the same school "
-            "— the published record shows RGU operating as a set of disciplinary silos. A score near "
+            "— the published record shows Univeristy of Aberdeen operating as a set of disciplinary silos. A score near "
             "**0** means co-authorship crosses school boundaries as often as it stays within them. A "
             "**negative score** would mean academics are more likely to co-publish with someone from a "
             "different school than their own, indicating an unusually open interdisciplinary publishing culture."
@@ -854,7 +854,7 @@ def page_resilience():
     st.subheader("Articulation Points — Single Points of Co-authorship Failure")
     st.warning(
         "Articulation points in the co-authorship network are academics whose published collaboration "
-        "record is the sole recorded link between two or more groups. If they were to leave RGU, "
+        "record is the sole recorded link between two or more groups. If they were to leave Univeristy of Aberdeen, "
         "retire, or cease collaborative publishing, those groups would have no remaining direct or "
         "indirect co-authorship path between them in the published record. These academics should be "
         "considered for succession planning, and their schools should be encouraged to build additional "
@@ -874,7 +874,7 @@ def page_resilience():
         "K-core decomposition peels the co-authorship network layer by layer, removing at each step "
         "any academic with fewer than *k* co-authors in the remaining graph. The innermost core — "
         "those with the highest k-core number — are academics who are so mutually interconnected "
-        "through joint publication that the network around them is highly stable. This is RGU's most "
+        "through joint publication that the network around them is highly stable. This is Univeristy of Aberdeen's most "
         "resilient co-authorship cluster. Academics in the outermost shells (k-core = 1) have only a "
         "single recorded co-authorship tie and sit at the periphery of the published collaboration network."
     )
@@ -937,7 +937,7 @@ def page_communities():
     st.header("Community Detection & Research Tribes")
     st.caption(
         "Reveals the organic co-authorship clusters that have formed independently "
-        "of RGU's formal school structure."
+        "of Univeristy of Aberdeen's formal school structure."
     )
 
     if not min_nodes_ok(G):
@@ -957,7 +957,7 @@ def page_communities():
 
     st.info(
         "Community detection reveals the research publishing tribes that have formed organically "
-        "through joint publication — independent of RGU's formal school structure. When a detected "
+        "through joint publication — independent of Univeristy of Aberdeen's formal school structure. When a detected "
         "community spans multiple schools, it means academics from those schools have built a genuine "
         "co-authorship cluster through their published work. This may represent an emerging "
         "interdisciplinary research group that could benefit from formal recognition, a dedicated "
@@ -1111,7 +1111,7 @@ def page_school_map():
     meta_G, school_sizes, pair_df, bc_df = result
 
     st.info(
-        "This map collapses RGU's entire co-authorship record into a school-level view. The thickness "
+        "This map collapses Univeristy of Aberdeen's entire co-authorship record into a school-level view. The thickness "
         "of each line is proportional to the total number of papers co-authored between academics in "
         "those two schools. It is important to note that a thick line means many joint publications "
         "have been recorded — it does not independently verify the strategic importance or quality of "
@@ -1128,7 +1128,7 @@ def page_school_map():
     st.subheader("School Betweenness Centrality in the Co-authorship Meta-Graph")
     st.markdown(
         "A school with high betweenness in the school meta-graph sits on many inter-school "
-        "co-authorship paths — it is a connector between otherwise separate parts of RGU's "
+        "co-authorship paths — it is a connector between otherwise separate parts of Univeristy of Aberdeen's "
         "inter-school publishing network."
     )
     st.dataframe(bc_df, use_container_width=True, hide_index=True)
@@ -1150,7 +1150,7 @@ def page_school_map():
 def page_hits():
     st.header("HITS Analysis — Hubs & Authorities")
     st.caption(
-        "Measures embeddedness in the most mutually interconnected part of RGU's co-authorship network."
+        "Measures embeddedness in the most mutually interconnected part of Univeristy of Aberdeen's co-authorship network."
     )
 
     if not min_nodes_ok(G):
@@ -1180,7 +1180,7 @@ def page_hits():
             academics who are themselves widely and mutually connected.
 
             Think of it as a measure of **being in the right rooms** — this academic's co-authorship
-            record places them at the centre of RGU's most interconnected publishing clusters.
+            record places them at the centre of Univeristy of Aberdeen's most interconnected publishing clusters.
 
             NetworkX's HITS implementation treats each undirected edge as a pair of directed edges in
             both directions, so hub and authority scores converge to the same value — this is expected
@@ -1262,7 +1262,7 @@ def page_download():
     st.download_button(
         "⬇ Download Node List (CSV)",
         data=node_df.to_csv(index=False).encode(),
-        file_name="rgu_nodes.csv",
+        file_name="abdn_nodes.csv",
         mime="text/csv",
     )
 
@@ -1283,7 +1283,7 @@ def page_download():
     st.download_button(
         "⬇ Download Edge List (CSV)",
         data=edge_df.to_csv(index=False).encode(),
-        file_name="rgu_edges.csv",
+        file_name="abdn_edges.csv",
         mime="text/csv",
     )
 
@@ -1316,7 +1316,7 @@ def page_download():
         st.download_button(
             "⬇ Download Centrality Metrics (CSV)",
             data=cent_df.to_csv(index=False).encode(),
-            file_name="rgu_centrality.csv",
+            file_name="abdn_centrality.csv",
             mime="text/csv",
         )
 
@@ -1339,7 +1339,7 @@ def page_download():
         st.download_button(
             "⬇ Download Community Assignments (CSV)",
             data=comm_df.to_csv(index=False).encode(),
-            file_name="rgu_communities.csv",
+            file_name="abdn_communities.csv",
             mime="text/csv",
         )
 
@@ -1369,14 +1369,14 @@ def page_school_bridges():
     nd, ed = graph_to_cache_args(G)
 
     st.info(
-        "Every line connecting two schools in RGU's co-authorship network passes through individual "
+        "Every line connecting two schools in University of Aberdeen's co-authorship network passes through individual "
         "academics. This page identifies, for each pair of connected schools, the single person whose "
         "publication record contributes most to that inter-school link — and measures how much of that "
         "connection depends on them alone. A Bridge Strength of 100% means every co-authored paper "
-        "between those two schools involves this one individual. If they were to leave RGU or reduce "
+        "between those two schools involves this one individual. If they were to leave University of Aberdeen or reduce "
         "their collaborative activity, that inter-school co-authorship connection would disappear "
         "entirely from the published record. These findings are not a criticism of those individuals "
-        "— they are a structural signal that RGU needs to build additional co-authorship bridges "
+        "— they are a structural signal that University of Aberdeen needs to build additional co-authorship bridges "
         "alongside the ones that already exist."
     )
 

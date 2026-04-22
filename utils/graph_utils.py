@@ -3,7 +3,7 @@ import networkx as nx
 import pandas as pd
 import streamlit as st
 
-GRAPH_PATH = "data/rgu_collaborations_refined.graphml"
+GRAPH_PATH = "data/aberdeen_collaborations_refined.graphml"
 
 
 @st.cache_resource
@@ -12,7 +12,7 @@ def load_graph():
     if not os.path.exists(GRAPH_PATH):
         return None, (
             f"Graph file not found at: **{GRAPH_PATH}**. "
-            "Please place `rgu_collaborations_refined.graphml` in the `data/` directory "
+            "Please place `aberdeen_collaborations_refined.graphml` in the `data/` directory "
             "and restart the app."
         )
     try:
