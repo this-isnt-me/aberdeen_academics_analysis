@@ -5,12 +5,9 @@ All analyses operate on undirected co-authorship graphs only.
 from __future__ import annotations
 
 import io
-import os
 import traceback
 
 import streamlit_authenticator as stauth
-import yaml
-from yaml.loader import SafeLoader
 
 import networkx as nx
 import pandas as pd
@@ -79,34 +76,44 @@ st.set_page_config(
 # ============================================================
 # Authentication — config and initialisation
 # ============================================================
-if not os.path.exists("config.yaml"):
-    st.error(
-        "**config.yaml not found.** Please create it from the project template "
-        "before running the app. See the project README for instructions."
-    )
-    st.stop()
+_credentials = {
+    "usernames": {
+        uname: dict(attrs)
+        for uname, attrs in st.secrets["credentials"]["usernames"].items()
+    }
+}
 
-with open("config.yaml") as _f:
-    _config = yaml.load(_f, Loader=SafeLoader)
-
-# SECURITY NOTES — MUST READ BEFORE DEPLOYMENT
-# 1. Run generate_passwords.py to hash all passwords before deploying.
-# 2. Change the cookie key in config.yaml to a long random string before deploying.
-# 3. Never commit config.yaml to a public Git repository — it is in .gitignore.
-# 4. Set cookie expiry_days to 0 in config.yaml for session-only login (no persistent cookie).
 authenticator = stauth.Authenticate(
-    _config["credentials"],
-    _config["cookie"]["name"],
-    _config["cookie"]["key"],
-    _config["cookie"]["expiry_days"],
+    _credentials,
+    st.secrets["cookie"]["name"],
+    st.secrets["cookie"]["key"],
+    int(st.secrets["cookie"]["expiry_days"]),
 )
 
 # ============================================================
 # Auth gate — show login form if not yet authenticated
 # ============================================================
 if st.session_state.get("authentication_status") is not True:
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stForm"] button {
+            background-color: #590606 !important;
+            border: none !important;
+            color: #ffffff !important;
+        }
+        div[data-testid="stForm"] button:hover {
+            background-color: #7a0808 !important;
+            color: #ffffff !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     _, _login_col, _ = st.columns([3, 4, 3])
     with _login_col:
+        _, _logo_col, _ = st.columns([3, 4, 3])
+        _logo_col.image("image/logo.svg", use_container_width=True)
         authenticator.login()
     if st.session_state.get("authentication_status") is False:
         st.error("Username or password is incorrect.")
@@ -135,8 +142,8 @@ if G_full.is_directed():
 # ============================================================
 # Sidebar — navigation & filters
 # ============================================================
-st.sidebar.markdown(f"Logged in as **{st.session_state['name']}**")
 authenticator.logout("Logout", "sidebar")
+st.sidebar.markdown(f"Logged in as **{st.session_state['name']}**")
 st.sidebar.markdown("---")
 st.sidebar.title("🔬 Univeristy of Aberdeen Network Analyser")
 st.sidebar.markdown("---")
