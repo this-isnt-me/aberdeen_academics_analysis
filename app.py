@@ -4,9 +4,6 @@ All analyses operate on undirected co-authorship graphs only.
 """
 from __future__ import annotations
 
-import io
-import traceback
-
 import streamlit_authenticator as stauth
 
 import networkx as nx
@@ -71,6 +68,91 @@ st.set_page_config(
     layout="wide",
     page_title="University of Aberdeen Research Network Analyser",
     page_icon="🔬",
+)
+
+# ============================================================
+# Dark mode CSS — secondary accent injection
+# Primary:   #007480  (teal)       — set in config.toml
+# Accent A:  #590606  (deep maroon)— borders, sidebar chrome, buttons
+# Accent B:  #D1B49C  (warm sand)  — headings, labels, captions
+# ============================================================
+st.markdown(
+    """
+    <style>
+    /* ── Page headings ── */
+    h1 {
+        color: #D1B49C !important;
+        border-bottom: 2px solid #590606;
+        padding-bottom: 0.3rem;
+    }
+    h2 { color: #007480 !important; }
+    h3 { color: #D1B49C !important; }
+
+    /* ── Metric cards ── */
+    div[data-testid="stMetric"] {
+        border-left: 3px solid #590606 !important;
+        background-color: #161b22 !important;
+        border-radius: 0 6px 6px 0 !important;
+        padding: 0.7rem 1rem 0.7rem 0.85rem !important;
+    }
+    div[data-testid="stMetric"] label {
+        color: #D1B49C !important;
+        font-size: 0.82rem !important;
+        letter-spacing: 0.02em !important;
+    }
+    /* positive delta stays green; negative stays red — leave delta colour alone */
+
+    /* ── Sidebar chrome ── */
+    section[data-testid="stSidebar"] {
+        border-right: 1px solid #590606 !important;
+    }
+    section[data-testid="stSidebar"] h1 {
+        color: #D1B49C !important;
+    }
+
+    /* ── Sidebar buttons (Reset filters, Logout) ── */
+    section[data-testid="stSidebar"] .stButton > button {
+        border: 1px solid #590606 !important;
+        color: #D1B49C !important;
+        background: transparent !important;
+        transition: background-color 0.15s ease, color 0.15s ease !important;
+    }
+    section[data-testid="stSidebar"] .stButton > button:hover {
+        background-color: #590606 !important;
+        color: #ffffff !important;
+    }
+
+    /* ── Horizontal rules ── */
+    hr { border-color: rgba(209, 180, 156, 0.2) !important; }
+
+    /* ── Expander toggle label ── */
+    details > summary p,
+    details > summary span {
+        color: #D1B49C !important;
+    }
+
+    /* ── Caption / sub-text ── */
+    div[data-testid="stCaptionContainer"] p {
+        color: #D1B49C !important;
+        opacity: 0.82;
+    }
+
+    /* ── Info / warning alert left border accents ── */
+    div[data-testid="stAlert"][kind="info"] {
+        border-left: 4px solid #007480 !important;
+    }
+    div[data-testid="stAlert"][kind="warning"] {
+        border-left: 4px solid #590606 !important;
+    }
+    div[data-testid="stAlert"][kind="success"] {
+        border-left: 4px solid #007480 !important;
+    }
+    div[data-testid="stAlert"][kind="error"] {
+        border-left: 4px solid #590606 !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # ============================================================
@@ -163,7 +245,6 @@ PAGES = [
     "12. HITS Analysis — Hubs & Authorities",
     "13. Ego Network Diversity (Blau Index)",
     "14. Temporal Trajectory Analysis",
-    "15. Download & Export",
 ]
 
 page = st.sidebar.radio("Navigate to:", PAGES, label_visibility="collapsed")
@@ -204,6 +285,113 @@ n_schools_shown = len({G.nodes[n].get("school", "") for n in G.nodes() if G.node
 st.sidebar.info(f"**Showing {n_nodes} academics across {n_schools_shown} schools**")
 
 school_color_map = get_school_color_map(G_full)
+
+# ============================================================
+# Global dark-mode CSS
+# primaryColor  #007480  — teal (set in config.toml, used by Streamlit widgets)
+# accent-red    #590606  — metric borders, dividers, logout button
+# accent-sand   #D1B49C  — captions, labels, secondary text
+# ============================================================
+st.markdown(
+    """
+    <style>
+    /* ── Typography ─────────────────────────────────────────── */
+    h1 { color: #007480 !important; border-bottom: 2px solid #590606; padding-bottom: 0.3rem; }
+    h2 { color: #D1B49C !important; }
+    h3 { color: #D1B49C !important; }
+
+    /* ── Metric cards ────────────────────────────────────────── */
+    div[data-testid="stMetric"] {
+        border: 1px solid #590606;
+        border-radius: 6px;
+        padding: 0.6rem 0.8rem;
+        background-color: #161b22;
+    }
+    div[data-testid="stMetric"] label {
+        color: #D1B49C !important;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #e6edf3 !important;
+    }
+    div[data-testid="stMetric"] [data-testid="stMetricDelta"] {
+        color: #007480 !important;
+    }
+
+    /* ── Section divider (st.markdown "---") ────────────────── */
+    hr { border-color: #590606 !important; opacity: 0.5; }
+
+    /* ── Caption / helper text ───────────────────────────────── */
+    div[data-testid="stCaptionContainer"] p,
+    small, .stCaption { color: #D1B49C !important; }
+
+    /* ── Info / warning / error boxes ───────────────────────── */
+    div[data-testid="stAlert"][data-baseweb="notification"] {
+        border-left: 4px solid #007480;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    section[data-testid="stSidebar"] {
+        background-color: #0d1117;
+        border-right: 1px solid #590606;
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        color: #007480 !important;
+        border-bottom: none;
+    }
+    /* Logout button in sidebar */
+    section[data-testid="stSidebar"] button[kind="secondary"] {
+        border: 1px solid #590606 !important;
+        color: #D1B49C !important;
+        background-color: transparent !important;
+    }
+    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
+        background-color: #590606 !important;
+        color: #ffffff !important;
+    }
+
+    /* ── Primary action buttons (st.button default) ──────────── */
+    button[kind="primary"],
+    div[data-testid="stButton"] > button {
+        background-color: #007480 !important;
+        border: none !important;
+        color: #ffffff !important;
+    }
+    button[kind="primary"]:hover,
+    div[data-testid="stButton"] > button:hover {
+        background-color: #005f69 !important;
+        color: #ffffff !important;
+    }
+
+    /* ── Dataframe / table headers ───────────────────────────── */
+    div[data-testid="stDataFrame"] th {
+        background-color: #161b22 !important;
+        color: #D1B49C !important;
+        border-bottom: 1px solid #590606 !important;
+    }
+
+    /* ── Expander header ─────────────────────────────────────── */
+    div[data-testid="stExpander"] summary {
+        color: #D1B49C !important;
+        border-bottom: 1px solid #590606;
+    }
+
+    /* ── Tab bar ─────────────────────────────────────────────── */
+    div[data-testid="stTabs"] button[role="tab"][aria-selected="true"] {
+        border-bottom: 2px solid #007480 !important;
+        color: #007480 !important;
+    }
+    div[data-testid="stTabs"] button[role="tab"] {
+        color: #D1B49C !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 # ============================================================
@@ -1269,107 +1457,6 @@ def page_hits():
 
 
 # ============================================================
-# Page 12 — Download & Export
-# ============================================================
-def page_download():
-    st.header("Download & Export")
-    st.caption("Export the current filtered graph and computed metrics as CSV files.")
-
-    if not min_nodes_ok(G, minimum=1):
-        return
-
-    nd, ed = graph_to_cache_args(G)
-
-    # Node list
-    node_df = get_node_dataframe(G)
-    st.subheader("Node List")
-    st.dataframe(node_df, use_container_width=True, hide_index=True)
-    st.download_button(
-        "⬇ Download Node List (CSV)",
-        data=node_df.to_csv(index=False).encode(),
-        file_name="abdn_nodes.csv",
-        mime="text/csv",
-    )
-
-    # Edge list
-    edge_rows = [
-        {
-            "Source": u,
-            "Target": v,
-            "Source School": G.nodes[u].get("school", ""),
-            "Target School": G.nodes[v].get("school", ""),
-            "Co-authored Papers (Weight)": d.get("weight", 1),
-        }
-        for u, v, d in G.edges(data=True)
-    ]
-    edge_df = pd.DataFrame(edge_rows)
-    st.subheader("Edge List")
-    st.dataframe(edge_df, use_container_width=True, hide_index=True)
-    st.download_button(
-        "⬇ Download Edge List (CSV)",
-        data=edge_df.to_csv(index=False).encode(),
-        file_name="abdn_edges.csv",
-        mime="text/csv",
-    )
-
-    # Centrality metrics
-    st.subheader("Centrality Metrics")
-    with st.spinner("Computing centrality metrics for export…"):
-        dc = safe_run(compute_degree_centrality, nd, ed, label="degree centrality")
-        wd = safe_run(compute_weighted_degree, nd, ed, label="weighted degree")
-        bc = safe_run(compute_betweenness_centrality, nd, ed, label="betweenness centrality")
-        ec = safe_run(compute_eigenvector_centrality, nd, ed, label="eigenvector centrality")
-        hits_res = safe_run(compute_hits, nd, ed, label="HITS")
-
-    if all(x is not None for x in [dc, wd, bc, ec, hits_res]):
-        hubs, _ = hits_res
-        cent_rows = []
-        for n in G.nodes():
-            d = G.nodes[n]
-            cent_rows.append({
-                "Name": d.get("label", n),
-                "School": d.get("school", ""),
-                "Job Title": d.get("job_title", ""),
-                "Degree Centrality": round(dc.get(n, 0), 6),
-                "Weighted Degree": wd.get(n, 0),
-                "Betweenness Centrality": round(bc.get(n, 0), 6),
-                "Eigenvector Centrality": round(ec.get(n, 0), 6),
-                "HITS Score": round(hubs.get(n, 0), 6),
-            })
-        cent_df = pd.DataFrame(cent_rows).sort_values("Weighted Degree", ascending=False)
-        st.dataframe(cent_df, use_container_width=True, hide_index=True)
-        st.download_button(
-            "⬇ Download Centrality Metrics (CSV)",
-            data=cent_df.to_csv(index=False).encode(),
-            file_name="abdn_centrality.csv",
-            mime="text/csv",
-        )
-
-    # Community assignments
-    st.subheader("Community Assignments")
-    with st.spinner("Computing community assignments…"):
-        comm_result = safe_run(compute_communities, nd, ed, 1.0, label="communities")
-    if comm_result:
-        partition, modularity, method = comm_result
-        comm_df = pd.DataFrame([
-            {
-                "Name": G.nodes[n].get("label", n),
-                "School": G.nodes[n].get("school", ""),
-                "Job Title": G.nodes[n].get("job_title", ""),
-                "Community": partition.get(n, -1),
-            }
-            for n in G.nodes()
-        ]).sort_values("Community")
-        st.dataframe(comm_df, use_container_width=True, hide_index=True)
-        st.download_button(
-            "⬇ Download Community Assignments (CSV)",
-            data=comm_df.to_csv(index=False).encode(),
-            file_name="abdn_communities.csv",
-            mime="text/csv",
-        )
-
-
-# ============================================================
 # Page 11 — School Bridges & Key Connectors
 # ============================================================
 def page_school_bridges():
@@ -1773,7 +1860,6 @@ ROUTE_MAP = {
     "12. HITS Analysis — Hubs & Authorities": page_hits,
     "13. Ego Network Diversity (Blau Index)": page_blau_index,
     "14. Temporal Trajectory Analysis": page_temporal_trajectory,
-    "15. Download & Export": page_download,
 }
 
 ROUTE_MAP[page]()
