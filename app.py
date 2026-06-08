@@ -4,8 +4,6 @@ All analyses operate on undirected co-authorship graphs only.
 """
 from __future__ import annotations
 
-import streamlit_authenticator as stauth
-
 import networkx as nx
 import pandas as pd
 import plotly.express as px
@@ -110,7 +108,7 @@ st.markdown(
         color: #D1B49C !important;
     }
 
-    /* ── Sidebar buttons (Reset filters, Logout) ── */
+    /* ── Sidebar buttons ── */
     section[data-testid="stSidebar"] .stButton > button {
         border: 1px solid #590606 !important;
         color: #D1B49C !important;
@@ -156,56 +154,6 @@ st.markdown(
 )
 
 # ============================================================
-# Authentication — config and initialisation
-# ============================================================
-_credentials = {
-    "usernames": {
-        uname: dict(attrs)
-        for uname, attrs in st.secrets["credentials"]["usernames"].items()
-    }
-}
-
-authenticator = stauth.Authenticate(
-    _credentials,
-    st.secrets["cookie"]["name"],
-    st.secrets["cookie"]["key"],
-    int(st.secrets["cookie"]["expiry_days"]),
-)
-
-# ============================================================
-# Auth gate — show login form if not yet authenticated
-# ============================================================
-if st.session_state.get("authentication_status") is not True:
-    st.markdown(
-        """
-        <style>
-        div[data-testid="stForm"] button {
-            background-color: #590606 !important;
-            border: none !important;
-            color: #ffffff !important;
-        }
-        div[data-testid="stForm"] button:hover {
-            background-color: #7a0808 !important;
-            color: #ffffff !important;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-    _, _login_col, _ = st.columns([3, 4, 3])
-    with _login_col:
-        _, _logo_col, _ = st.columns([3, 4, 3])
-        _logo_col.image("image/logo.svg", use_container_width=True)
-        authenticator.login()
-    if st.session_state.get("authentication_status") is False:
-        st.error("Username or password is incorrect.")
-    else:
-        st.warning(
-            "Please enter your credentials to access the University of Aberdeen Research Network Analyser."
-        )
-    st.stop()
-
-# ============================================================
 # Load graph
 # ============================================================
 G_full, load_error = load_graph()
@@ -224,9 +172,6 @@ if G_full.is_directed():
 # ============================================================
 # Sidebar — navigation & filters
 # ============================================================
-authenticator.logout("Logout", "sidebar")
-st.sidebar.markdown(f"Logged in as **{st.session_state['name']}**")
-st.sidebar.markdown("---")
 st.sidebar.title("🔬 Univeristy of Aberdeen Network Analyser")
 st.sidebar.markdown("---")
 
@@ -342,16 +287,6 @@ st.markdown(
     section[data-testid="stSidebar"] h3 {
         color: #007480 !important;
         border-bottom: none;
-    }
-    /* Logout button in sidebar */
-    section[data-testid="stSidebar"] button[kind="secondary"] {
-        border: 1px solid #590606 !important;
-        color: #D1B49C !important;
-        background-color: transparent !important;
-    }
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
-        background-color: #590606 !important;
-        color: #ffffff !important;
     }
 
     /* ── Primary action buttons (st.button default) ──────────── */
